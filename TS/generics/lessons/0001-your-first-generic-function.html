@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your First Generic Function</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<main>
+
+<nav class="crumbs">
+  TypeScript Generics · Lesson 1 ·
+  <a href="../reference/generics-cheatsheet.html">Cheat sheet</a>
+</nav>
+
+<h1>Your First Generic Function</h1>
+<p class="subtitle">Make a function remember the type its caller gave it.</p>
+
+<div class="meta">
+  <span>≈ 30 minutes</span>
+  <span>Read → Recall → Write</span>
+  <span>Win: four compiler-checked generics, no <code>any</code></span>
+</div>
+
+<p>
+  You've seen <code>useState&lt;User&gt;</code> and <code>Promise&lt;T&gt;</code> in real code.
+  By the end of this lesson you'll have <em>written</em> the other side of that:
+  a function that declares its own type parameter. That's the first step toward
+  the reusable fetch wrappers and utilities in your <a href="../MISSION.md">mission</a>.
+</p>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>1. The problem: <code>any</code> forgets</h2>
+
+<p>Here's a utility you might find in any <code>utils/</code> folder:</p>
+
+<pre><code>function getFirst(arr: any[]): any {
+  return arr[0];
+}
+
+const n = getFirst([10, 20, 30]);   <span class="c">// n: any</span>
+n.toUpperCase();                    <span class="c">// no error. Crashes at runtime.</span></code></pre>
+
+<p>
+  The function works on any array, and that part is good. But the caller passed in
+  <code>number[]</code> and got back <code>any</code>. The type information went
+  in and never came out. Switching to <code>unknown</code> is safer, but it still
+  forgets: the caller would have to cast the result back to <code>number</code>.
+</p>
+
+<p>
+  What we want is a function that works on <em>any</em> type and still
+  <em>remembers which one</em> it got.
+</p>
+
+<blockquote>
+  “Unlike using <code>any</code>, it’s also just as precise (i.e., it doesn’t lose any information).”
+  <footer>TypeScript Handbook, on generic functions<sup class="cite"><a href="#s1">[1]</a></sup></footer>
+</blockquote>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>2. Declare a type parameter</h2>
+
+<pre><code>function getFirst<span class="hl">&lt;T&gt;</span>(arr: <span class="hl">T</span>[]): <span class="hl">T</span> | undefined {
+  return arr[0];
+}</code></pre>
+
+<p>
+  <code>&lt;T&gt;</code> after the function name <strong>declares a type parameter</strong>.
+  Think of it as a parameter list for types. <code>(arr)</code> receives a value
+  when the function is called. <code>&lt;T&gt;</code> receives a type.
+  Once declared, <code>T</code> can be used anywhere in the signature or the body.
+</p>
+
+<div class="anatomy">
+<table>
+<tr><td>function getFirst</td><td><strong>&lt;T&gt;</strong></td><td>(arr: </td><td><strong>T</strong>[]</td><td>): </td><td><strong>T</strong> | undefined</td></tr>
+<tr><td></td><td class="lbl">declares T</td><td></td><td class="lbl">uses T (input)</td><td></td><td class="lbl">uses T (output)</td></tr>
+</table>
+</div>
+
+<blockquote>
+  “A function is generic if it declares a type parameter.”
+  <footer>Matt Pocock, <i>Total TypeScript Essentials</i><sup class="cite"><a href="#s2">[2]</a></sup></footer>
+</blockquote>
+
+<p>
+  The name <code>T</code> is only a convention. <code>&lt;Item&gt;</code> works the same way,
+  and so does the Handbook's <code>&lt;Type&gt;</code><sup class="cite"><a href="#s1">[1]</a></sup>.
+  A longer name often reads better once a function has two or three type parameters.
+</p>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>3. Callers usually don't write the type: inference</h2>
+
+<pre><code>const n    = getFirst([10, 20, 30]);     <span class="c">// T = number  → n: number | undefined</span>
+const name = getFirst(["Ada", "Linus"]); <span class="c">// T = string  → name: string | undefined</span></code></pre>
+
+<p>
+  Nobody wrote <code>&lt;number&gt;</code>. TypeScript looked at the value passed for
+  <code>arr</code>, worked out what <code>T</code> must be, and carried that type through
+  to the return type.
+</p>
+
+<blockquote>
+  “If you don't pass a type argument, TypeScript will attempt to infer it from the function's runtime arguments.”
+  <footer><i>Total TypeScript Essentials</i><sup class="cite"><a href="#s2">[2]</a></sup></footer>
+</blockquote>
+
+<div class="callout">
+  <span class="label">Try it in VS Code</span>
+  Hover over <code>getFirst</code> at a call site. The tooltip shows the
+  <em>instantiated</em> signature, with <code>T</code> already replaced, e.g.
+  <code>getFirst&lt;number&gt;(arr: number[]): number | undefined</code>.
+  This is the fastest way to debug inference<sup class="cite"><a href="#s2">[2]</a></sup>.
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>4. When you <em>must</em> pass the type argument</h2>
+
+<p>
+  Inference needs evidence, and that evidence is the arguments. Here's a fetch wrapper
+  of the kind you'd write in a Node service or a Next.js app:
+</p>
+
+<pre><code>async function fetchJson&lt;T&gt;(url: string): Promise&lt;T&gt; {
+  const res = await fetch(url);
+  return res.json();
+}</code></pre>
+
+<p>
+  <code>T</code> appears <em>only</em> in the return type. Nothing about
+  <code>"/api/me"</code> tells TypeScript what the server sends back, so the caller
+  has to say it, by passing a <strong>type argument</strong>:
+</p>
+
+<pre><code>const me = await fetchJson<span class="hl">&lt;User&gt;</span>("/api/me");  <span class="c">// me: User</span></code></pre>
+
+<p>
+  And when you <em>do</em> pass one, it wins. TypeScript checks the arguments against it
+  rather than inferring something else:
+</p>
+
+<pre><code>getFirst&lt;string&gt;([1, 2, 3]);
+<span class="c">//              ~~~~~~~~~ Error: number is not assignable to string</span></code></pre>
+
+<blockquote>
+  “If you pass in a type argument, TypeScript will use it as the source of truth.”
+  <footer><i>Total TypeScript Essentials</i><sup class="cite"><a href="#s2">[2]</a></sup></footer>
+</blockquote>
+
+<div class="callout">
+  <span class="label">Honesty note</span>
+  <code>fetchJson&lt;User&gt;</code> is a promise the <em>caller</em> makes, not one
+  TypeScript checks. If the API actually returns something else, nothing catches it
+  at runtime. Runtime validation (e.g. zod) is a later topic. For now, just know that
+  the type argument is trusted, not verified.
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>5. Parameter vs argument: now read real code</h2>
+
+<table class="ref">
+  <tr><th>Term</th><th>Where it appears</th><th>Example</th></tr>
+  <tr><td><strong>Type parameter</strong></td><td>In a <em>declaration</em>: a placeholder</td><td><code>function fetchJson&lt;<strong>T</strong>&gt;(…)</code></td></tr>
+  <tr><td><strong>Type argument</strong></td><td>At a <em>use site</em>: the actual type</td><td><code>fetchJson&lt;<strong>User</strong>&gt;(…)</code></td></tr>
+</table>
+
+<p>With that split, the code you already see at work reads plainly:</p>
+
+<pre><code>const [user, setUser] = useState<span class="hl">&lt;User | null&gt;</span>(null);
+<span class="c">// a type ARGUMENT to React's generic useState. Without it, TS would infer
+// the state's type from `null` alone, and setUser(someUser) would fail.</span>
+
+const ids: Array<span class="hl">&lt;number&gt;</span> = [1, 2, 3];
+<span class="c">// a type ARGUMENT to the built-in generic type Array.</span>
+
+async function getUser(): Promise<span class="hl">&lt;User&gt;</span> { … }
+<span class="c">// a type ARGUMENT to Promise: "this promise resolves to a User".</span></code></pre>
+
+<p>
+  Every time you've typed <code>&lt;Something&gt;</code> <em>after</em> a name you're
+  <em>using</em>, you were passing a type argument. Starting today, you can also
+  write the <em>declaring</em> side.
+</p>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>6. Recall check</h2>
+
+<p>
+  Answer from memory, without scrolling up. A wrong answer here is useful:
+  struggling to recall is what makes it stick. You get one attempt per question.
+</p>
+
+<div class="quiz">
+
+  <div class="q" data-answer="1">
+    <div class="prompt">In <code>function wrap&lt;T&gt;(x: T): T[]</code>, what is <code>&lt;T&gt;</code> doing?</div>
+    <div class="opts">
+      <button class="opt">Declaring a type parameter for wrap</button>
+      <button class="opt">Passing a type argument into wrap</button>
+      <button class="opt">Converting the value into a type</button>
+      <button class="opt">Marking the parameter as optional here</button>
+    </div>
+    <p class="why"><code>&lt;T&gt;</code> right after the function name in a declaration <em>declares</em> a type parameter. Type arguments appear at call sites, like <code>wrap&lt;User&gt;(…)</code>.</p>
+  </div>
+
+  <div class="q" data-answer="3">
+    <div class="prompt">Given <code>const u: User = …</code>, what is the type of <code>wrap(u)</code>?</div>
+    <div class="opts">
+      <button class="opt"><code>any[]</code></button>
+      <button class="opt"><code>T[]</code></button>
+      <button class="opt"><code>User[]</code></button>
+      <button class="opt"><code>unknown[]</code></button>
+    </div>
+    <p class="why">TypeScript infers <code>T = User</code> from the argument, then substitutes it into the return type <code>T[]</code>. <code>T</code> itself never leaks out to the caller.</p>
+  </div>
+
+  <div class="q" data-answer="4">
+    <div class="prompt">When do you <em>have</em> to write the type argument yourself?</div>
+    <div class="opts">
+      <button class="opt">Whenever the function takes exactly two parameters</button>
+      <button class="opt">Every single time you call a generic</button>
+      <button class="opt">Only when the parameter is an array</button>
+      <button class="opt">When no argument gives evidence about T</button>
+    </div>
+    <p class="why">Inference works from the runtime arguments. In <code>fetchJson&lt;T&gt;(url: string): Promise&lt;T&gt;</code>, <code>T</code> only appears in the return type, so there's nothing to infer it from.</p>
+  </div>
+
+  <div class="q" data-answer="2">
+    <div class="prompt">In <code>fetchJson&lt;User&gt;("/api/me")</code>, <code>User</code> is a…</div>
+    <div class="opts">
+      <button class="opt">type parameter</button>
+      <button class="opt">type argument</button>
+      <button class="opt">type constraint</button>
+      <button class="opt">runtime value</button>
+    </div>
+    <p class="why">At a call site, the type in angle brackets is an <em>argument</em>: the actual type filling the placeholder <code>T</code>.</p>
+  </div>
+
+  <div class="q" data-answer="3">
+    <div class="prompt">What does <code>getFirst&lt;string&gt;([1, 2, 3])</code> do?</div>
+    <div class="opts">
+      <button class="opt">Infers number and ignores the string</button>
+      <button class="opt">Compiles and returns string or undefined</button>
+      <button class="opt">Errors because numbers are not strings</button>
+      <button class="opt">Converts each number into a string</button>
+    </div>
+    <p class="why">An explicit type argument beats inference. <code>T</code> is locked to <code>string</code>, so <code>[1, 2, 3]</code> is checked against <code>string[]</code> and fails. Types never convert values at runtime.</p>
+  </div>
+
+  <p class="quiz-score"></p>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>7. Write it: the real exercise</h2>
+
+<p>
+  This is the part that builds the skill. The exercise file has type tests written
+  with <code>Expect&lt;Equal&lt;…&gt;&gt;</code>. They fail now and pass once your generics
+  are right, and the TypeScript compiler is the one checking them.
+</p>
+
+<ol class="steps">
+  <li>Open <code>exercises/0001-first-generic-function.ts</code> in VS Code.
+      Red squiggles = failing tests.</li>
+  <li>In a terminal in <code>D:\learning\TS\generics</code>, run <code>npm run check</code>.
+      You'll see 7 errors to start.</li>
+  <li>Work through Tasks 1 → 3 (Task 4 is a stretch: two type parameters). No <code>any</code>.</li>
+  <li>Done when <code>npm run check</code> prints nothing. Only then compare with
+      <code>exercises/solutions/</code>.</li>
+</ol>
+
+<div class="callout">
+  <span class="label">If you're stuck</span>
+  Ask yourself three questions: <em>Where do I declare <code>T</code>? Where does the input use it?
+  Where does the output use it?</em> If <code>T</code> appears only in the output, the caller
+  has to pass it.
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>Read next</h2>
+<p>
+  <strong>Primary source:</strong>
+  <a href="https://www.totaltypescript.com/books/total-typescript-essentials/utility-folder-development-in-typescript#generic-functions">
+  <i>Total TypeScript Essentials</i>, ch. 16 → “Generic Functions”</a>
+  (free online). Read up to <em>“Type Parameter Defaults”</em> and stop there;
+  constraints are the next lesson.
+</p>
+<p>
+  <strong>Coming up:</strong> Lesson 2, <em>Constraints</em>: why
+  <code>function len&lt;T&gt;(x: T) { return x.length }</code> is an error, and how
+  <code>extends</code> and <code>keyof</code> fix it.
+  Keep the <a href="../reference/generics-cheatsheet.html">cheat sheet</a> open meanwhile.
+</p>
+
+<ol class="sources">
+  <li id="s1"><a href="https://www.typescriptlang.org/docs/handbook/2/generics.html">TypeScript Handbook, “Generics”</a> (official docs).</li>
+  <li id="s2"><a href="https://www.totaltypescript.com/books/total-typescript-essentials/utility-folder-development-in-typescript#generic-functions">Matt Pocock, <i>Total TypeScript Essentials</i>, ch. 16 “Generic Functions”</a>.</li>
+</ol>
+
+<p class="ask">
+  Something unclear, or the compiler error makes no sense? Ask me, your teacher, in the
+  chat. Paste the error and I'll walk you through it. When you finish the exercise, tell me
+  how it went so I can pitch the next lesson right.
+</p>
+
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

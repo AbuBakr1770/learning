@@ -1,0 +1,11 @@
+{
+  "name": "ts-generics-learning",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit -p ."
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

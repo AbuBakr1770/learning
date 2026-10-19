@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generics Cheat Sheet</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<main>
+
+<nav class="crumbs">
+  TypeScript Generics · Reference ·
+  <a href="../lessons/0001-your-first-generic-function.html">Lesson 1</a>
+</nav>
+
+<h1>Generics Cheat Sheet</h1>
+<p class="subtitle">Grows with every lesson. Print it, pin it.</p>
+
+<h2>Generic functions <small>(Lesson 1)</small></h2>
+
+<table class="ref">
+  <tr><th>Pattern</th><th>Syntax</th><th>Notes</th></tr>
+  <tr>
+    <td>Declare a type parameter</td>
+    <td><code>function f&lt;T&gt;(x: T): T</code></td>
+    <td>The function is generic because it declares <code>T</code>.</td>
+  </tr>
+  <tr>
+    <td>Arrow function</td>
+    <td><code>const f = &lt;T,&gt;(x: T): T =&gt; x</code></td>
+    <td>The trailing comma stops <code>.tsx</code> files reading <code>&lt;T&gt;</code> as JSX.</td>
+  </tr>
+  <tr>
+    <td>Inferred call</td>
+    <td><code>f(42)</code> → <code>T = number</code></td>
+    <td>Inferred from the runtime arguments. Hover the call to see it.</td>
+  </tr>
+  <tr>
+    <td>Explicit type argument</td>
+    <td><code>fetchJson&lt;User&gt;(url)</code></td>
+    <td>Required when <code>T</code> appears only in the return type. Explicit beats inferred.</td>
+  </tr>
+  <tr>
+    <td>Several type parameters</td>
+    <td><code>function pair&lt;A, B&gt;(a: A, b: B): [A, B]</code></td>
+    <td>Each one is inferred independently.</td>
+  </tr>
+</table>
+
+<h3>Parameter vs argument</h3>
+<pre><code>function fetchJson&lt;<span class="hl">T</span>&gt;(url: string): Promise&lt;T&gt;   <span class="c">// T    = type PARAMETER (declaration)</span>
+fetchJson&lt;<span class="hl">User</span>&gt;("/api/me")                      <span class="c">// User = type ARGUMENT  (use site)</span></code></pre>
+
+<h3>Rules of thumb</h3>
+<ul>
+  <li>If the input type should flow to the output, use a generic, not <code>any</code> or <code>unknown</code>.</li>
+  <li>Ask: <em>where is T declared, where does the input use it, where does the output use it?</em></li>
+  <li>A type argument is trusted, not checked at runtime. <code>fetchJson&lt;User&gt;</code> is a promise the caller makes.</li>
+</ul>
+
+<h2>Coming next</h2>
+<p class="sources">Constraints (<code>extends</code>, <code>keyof</code>) · generic types (<code>ApiResponse&lt;T&gt;</code>) · defaults · generic React components.</p>
+
+<ol class="sources">
+  <li><a href="https://www.typescriptlang.org/docs/handbook/2/generics.html">TypeScript Handbook, “Generics”</a></li>
+  <li><a href="https://www.totaltypescript.com/books/total-typescript-essentials/utility-folder-development-in-typescript#generic-functions"><i>Total TypeScript Essentials</i>, ch. 16 “Generic Functions”</a></li>
+</ol>
+
+</main>
+</body>
+</html>
